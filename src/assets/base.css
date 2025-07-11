@@ -1,0 +1,33 @@
+/* src/assets/base.css */
+
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0; /* Remove default browser margins */
+  font-weight: normal; /* Override potential browser defaults for some elements */
+}
+
+/* Base styles for the <body> element */
+body {
+  
+  min-height: 100vh; /* Ensure body takes at least full viewport height */
+  line-height: 1.6; /* Sets a base line height for text readability */
+
+  /* Standard font stack for cross-browser consistency */
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  font-size: 15px; /* Base font size */
+
+  /* Text rendering optimizations */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased; /* macOS font smoothing */
+  -moz-osx-font-smoothing: grayscale; /* Firefox font smoothing */
+
+  /* Add a transition for smooth theme changes. This is here for consistency,
+     but the primary transition will be from main.css on html,body */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+

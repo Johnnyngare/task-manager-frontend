@@ -1,0 +1,65 @@
+/* src/assets/main.css */
+
+
+@import "./base.css"; 
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+html,
+body {
+  /* Apply default Tailwind colors for light mode */
+  @apply bg-slate-100 text-slate-900;
+
+  /* Global page layout properties (height, width, font, etc.) */
+  min-height: 100vh; 
+  width: 100%; 
+  line-height: 1.6; 
+  font-family: Inter, /* Modern sans-serif font */ -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-size: 15px; /* Base font size */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased; /* Smoother font rendering on WebKit browsers */
+  -moz-osx-font-smoothing: grayscale; /* Smoother font rendering on Firefox */
+
+  /* Add a smooth transition for background and text color changes during theme toggle */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- DARK MODE OVERRIDES --- */
+/* These styles are applied when the 'dark' class is added to the <html> tag */
+html.dark {
+  @apply bg-slate-900 text-slate-100; /* Apply dark mode Tailwind colors */
+}
+
+#app {
+  width: 100%;
+  font-weight: normal; /* Override potential default bolding */
+ 
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1); /* Specific green color for links */
+  transition: 0.4s; /* Smooth transition for hover effects */
+  padding: 3px; /* Small padding for clickable area */
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2); /* Hover effect for links */
+  }
+}
+
+
+/* This media query ensures the body is a flex container for centering the #app div on large screens */
+@media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center; /* Centers content horizontally and vertically within the body */
+  }
+}

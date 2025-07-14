@@ -52,11 +52,8 @@
 </template>
 
 <script setup>
-// --- CRUCIAL: Import CSS files directly from node_modules path using '/' prefix (from project root) ---
-// This method is generally the most robust for Vite when other imports fail.
-import "/node_modules/@fullcalendar/core/main.css";
-import "/node_modules/@fullcalendar/daygrid/main.css";
-import "/node_modules/@fullcalendar/timegrid/main.css";
+// CSS imports are no longer needed for FullCalendar v6+.
+// The JavaScript plugins now handle their own styles automatically.
 
 import { ref, onMounted, computed } from "vue";
 import FullCalendar from "@fullcalendar/vue3";

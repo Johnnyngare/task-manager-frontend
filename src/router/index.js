@@ -10,6 +10,7 @@ import TasksPage from "../views/TasksPage.vue";
 import ProfilePage from "../views/ProfilePage.vue";
 import ForgotPasswordPage from "../views/ForgotPasswordPage.vue";
 import ResetPasswordPage from "../views/ResetPasswordPage.vue";
+import CalendarPage from "../views/CalendarPage.vue"; // NEW: Import CalendarPage
 
 const routes = [
   {
@@ -41,6 +42,13 @@ const routes = [
     component: ProfilePage,
     meta: { requiresAuth: true },
   },
+  {
+    // NEW: Calendar Route
+    path: "/calendar",
+    name: "Calendar",
+    component: CalendarPage,
+    meta: { requiresAuth: true }, // Protected route
+  },
 
   // --- Password Reset Routes ---
   {
@@ -55,7 +63,6 @@ const routes = [
     component: ResetPasswordPage,
     meta: { guestOnly: true }, // Should only be accessible to guests
   },
-  
 ];
 
 const router = createRouter({

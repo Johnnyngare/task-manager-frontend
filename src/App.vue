@@ -17,7 +17,12 @@
               class="hover:text-green-300 transition-colors"
               >My Tasks</router-link
             >
-            <!-- Calendar Link REMOVED from Desktop Navigation -->
+            <router-link
+              to="/calendar"
+              class="hover:text-green-300 transition-colors"
+              >Calendar</router-link
+            >
+            <!-- NEW LINK: Desktop Calendar Link -->
             <UserDropdown />
           </template>
           <template v-else>
@@ -88,7 +93,13 @@
             class="block py-2 px-3 hover:bg-slate-600 rounded"
             >My Tasks</router-link
           >
-          <!-- Calendar Link REMOVED from Mobile Navigation -->
+          <router-link
+            @click="closeMobileNav"
+            to="/calendar"
+            class="block py-2 px-3 hover:bg-slate-600 rounded"
+            >Calendar</router-link
+          >
+          <!-- NEW LINK: Mobile Calendar Link -->
           <!-- Display username in mobile nav -->
           <span class="block py-2 px-3 text-sm text-slate-400">{{
             authStore.user?.username
@@ -133,7 +144,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import axios from "axios";
-import UserDropdown from "./components/UserDropdown.vue"; // Import the UserDropdown component
+import UserDropdown from "./components/UserDropdown.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -165,7 +176,6 @@ onMounted(() => {
   }
 });
 
-// Optional: Close mobile nav if route changes (e.g., user clicks link quickly before nav closes)
 router.afterEach(() => {
   closeMobileNav();
 });

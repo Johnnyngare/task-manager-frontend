@@ -1,61 +1,63 @@
 // src/main.js
-import { createApp } from 'vue'
-import { createPinia } from 'pinia' 
-import App from './App.vue'
-import router from './router'
-import Toast from 'vue-toastification'
-import 'vue-toastification/dist/index.css'
-import './assets/main.css'
-import axios from 'axios'
-import { useAuthStore } from './stores/auth'; 
+import { createApp } from "vue";
+import { createPinia } from "pinia";
+import App from "./App.vue";
+import router from "./router";
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
+import "./assets/main.css";
+import axios from "axios";
+import { useAuthStore } from "./stores/auth";
 
-const app = createApp(App)
-const pinia = createPinia(); 
-app.use(pinia); 
+const app = createApp(App);
+const pinia = createPinia();
+app.use(pinia);
 
-// This allows you to access authStore within the axios interceptor after Pinia is installed
-app.config.globalProperties.$pinia = pinia;
-
+// --- AXIOS GLOBAL CONFIGURATION ---
+axios.defaults.baseURL = "http://localhost:5000/api";
+axios.defaults.withCredentials = true; // Crucial: Tells Axios to send cookies
 
 // --- AXIOS REQUEST INTERCEPTOR ---
-// This runs before every HTTP request is sent.
-axios.interceptors.request.use((config) => {
-  const authStore = useAuthStore(); 
-  if (authStore.token) {
-    config.headers.Authorization = `Bearer ${authStore.token}`;
+axios.interceptors.request.use(
+  (config) => {
+    // With httpOnly cookies, we no longer need to manually set the Authorization header.
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+);
 
-
-// --- AXIOS RESPONSE INTERCEPTOR (for global error handling like 401s) ---
-axios.interceptors.response.use((response) => {
+// --- AXIOS RESPONSE INTERCEPTOR ---
+axios.interceptors.response.use(
+  (response) => {
     return response;
-  }, (error) => {
-    // Check for 401 Unauthorized errors globally
+  },
+  (error) => {
+    const authStore = useAuthStore(pinia);
+
     if (error.response && error.response.status === 401) {
-      const authStore = useAuthStore();
-      
-      // Prevent infinite redirect if already on login/register page
-      if (router.currentRoute.value.name !== 'Login' && router.currentRoute.value.name !== 'Register') {
-        authStore.logout(router); // Log out the user
-        
-        const toast = app.config.globalProperties.$toast; // Access toast if set globally by its plugin
+      // Only trigger logout if the user was previously considered authenticated.
+      // This prevents logout loops on public pages.
+      if (authStore.isUserAuthenticated) {
+        console.log(
+          "Interceptor caught 401. User was authenticated, now logging out..."
+        );
+
+        const toast = app.config.globalProperties.$toast;
         if (toast) {
-          toast.error('Session expired. Please log in again.');
-        } else {
-          console.error('Toast instance not available globally from interceptor.');
+          toast.error("Session expired. Please log in again.");
         }
+
+        authStore.logout();
       }
     }
     return Promise.reject(error);
-  });
+  }
+);
 
-
-app.use(router) 
-app.use(Toast, { 
+app.use(router);
+app.use(Toast, {
   transition: "Vue-Toastification__bounce",
   maxToasts: 5,
   newestOnTop: true,
@@ -70,10 +72,7 @@ app.use(Toast, {
   hideProgressBar: false,
   closeButton: "button",
   icon: true,
-  rtl: false
-})
+  rtl: false,
+});
 
-// Optional: Make Toast instance globally accessible too if needed in interceptors or other non-Vue files
-app.config.globalProperties.$toast = app.config.globalProperties.$toast || app.provide('toast', app.config.globalProperties.$toast); // This is how vue-toastification makes it available
-
-app.mount('#app')
+app.mount("#app");

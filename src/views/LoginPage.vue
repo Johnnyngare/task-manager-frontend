@@ -5,12 +5,12 @@
       class="w-full max-w-md bg-white dark:bg-slate-800 p-8 rounded-xl shadow-2xl"
     >
       <h2
-        class="text-3xl font-bold text-center text-slate-800 dark:text-white mb-8"
+        class="text-3xl font-bold text-slate-800 dark:text-white mb-6 text-center"
       >
         Login
       </h2>
 
-      <!-- Display API error message here -->
+      <!-- Display error message from the auth store -->
       <div
         v-if="authStore.error"
         class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6"
@@ -23,7 +23,7 @@
         <div>
           <label
             for="email"
-            class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1"
+            class="block text-sm font-medium text-slate-700 dark:text-slate-300"
             >Email</label
           >
           <input
@@ -31,13 +31,13 @@
             id="email"
             v-model="email"
             required
-            class="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            class="mt-1 w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
         <div>
           <label
             for="password"
-            class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1"
+            class="block text-sm font-medium text-slate-700 dark:text-slate-300"
             >Password</label
           >
           <input
@@ -45,8 +45,15 @@
             id="password"
             v-model="password"
             required
-            class="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            class="mt-1 w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+        </div>
+        <div class="text-right">
+          <router-link
+            to="/forgot-password"
+            class="text-sm text-blue-600 hover:underline"
+            >Forgot Password?</router-link
+          >
         </div>
         <button
           type="submit"
@@ -56,13 +63,6 @@
           {{ authStore.loading ? "Logging in..." : "Login" }}
         </button>
       </form>
-      <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
-        <router-link
-          to="/forgot-password"
-          class="font-medium text-blue-600 hover:underline"
-          >Forgot Password?</router-link
-        >
-      </p>
       <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
         Don't have an account?
         <router-link
@@ -76,26 +76,19 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
-import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
-
-const toast = useToast();
-const authStore = useAuthStore();
-const router = useRouter();
 
 const email = ref("");
 const password = ref("");
+const authStore = useAuthStore();
 
-const handleLogin = async () => {
-  const success = await authStore.login(
-    { email: email.value, password: password.value },
-    router
-  );
-  if (success) {
-    toast.success("Login successful! Welcome back.");
-  }
-  
+// --- FIX: Clear any previous auth errors when the component is mounted ---
+onMounted(() => {
+  authStore.clearError();
+});
+
+const handleLogin = () => {
+  authStore.login({ email: email.value, password: password.value });
 };
 </script>

@@ -1,4 +1,4 @@
-<!-- src/views/TasksPage.vue (Add Search/Filter UI) -->
+<!-- src/views/TasksPage.vue -->
 <template>
   <div class="space-y-8">
     <header
@@ -113,7 +113,7 @@
       </p>
     </div>
 
-    <!-- Responsive Task Grid (renders only if tasks are available) -->
+    <!-- Responsive Task Grid -->
     <div
       v-else
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
@@ -149,49 +149,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue"; // Import watch
+import { ref, watch } from "vue";
 import { useTasksStore } from "../stores/tasks";
 import { useAuthStore } from "../stores/auth";
 import TaskItem from "../components/TaskItem.vue";
 import TaskForm from "../components/TaskForm.vue";
-import debounce from "lodash.debounce"; // Install lodash.debounce
+import debounce from "lodash.debounce";
 
+// 1. Initialize stores and refs first
 const tasksStore = useTasksStore();
 const authStore = useAuthStore();
 
 const showTaskForm = ref(false);
 const editingTask = ref(null);
-
 const searchQuery = ref("");
 const statusFilter = ref("");
 
-// Debounced search function
-const debouncedFetchTasks = debounce(() => {
-  fetchTasksWithFilters();
-}, 300); // Debounce by 300ms
-
-// Watchers for filter changes
-watch(statusFilter, () => {
-  fetchTasksWithFilters();
-});
-
-onMounted(() => {
-  if (authStore.isAuthenticated) {
-    tasksStore.fetchTasks(); // Initial fetch
-  }
-});
-
-// Centralized function to fetch tasks with current filters
+// 2. DEFINE ALL YOUR FUNCTIONS NEXT
 const fetchTasksWithFilters = () => {
+  if (!authStore.isUserAuthenticated) return;
   const filters = {};
-  if (searchQuery.value) {
-    filters.search = searchQuery.value;
-  }
-  if (statusFilter.value) {
-    filters.status = statusFilter.value;
-  }
+  if (searchQuery.value) filters.search = searchQuery.value;
+  if (statusFilter.value) filters.status = statusFilter.value;
   tasksStore.fetchTasks(filters);
 };
+
+const debouncedFetchTasks = debounce(() => {
+  fetchTasksWithFilters();
+}, 300);
 
 const openAddTaskForm = () => {
   editingTask.value = null;
@@ -206,7 +191,7 @@ const openEditTaskForm = (task) => {
 const handleTaskSaved = () => {
   showTaskForm.value = false;
   editingTask.value = null;
-  fetchTasksWithFilters(); // Re-fetch tasks with current filters after save
+  fetchTasksWithFilters();
 };
 
 const closeTaskForm = () => {
@@ -217,7 +202,6 @@ const closeTaskForm = () => {
 const handleDeleteTask = async (taskId) => {
   if (confirm("Are you sure you want to delete this task?")) {
     await tasksStore.deleteTask(taskId);
-    fetchTasksWithFilters(); // Re-fetch tasks after deletion (optional, store removes it)
   }
 };
 
@@ -225,10 +209,27 @@ const handleToggleStatus = async (task) => {
   const newStatus = task.status === "pending" ? "completed" : "pending";
   await tasksStore.updateTask(task._id, { status: newStatus });
 };
+
+// 3. SET UP YOUR WATCHERS LAST
+watch(
+  () => authStore.isUserAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      fetchTasksWithFilters();
+    } else {
+      tasksStore.tasks = [];
+      tasksStore.error = "Not authenticated. Please log in.";
+    }
+  },
+  { immediate: true }
+);
+
+watch(statusFilter, () => {
+  fetchTasksWithFilters();
+});
 </script>
 
 <style>
-/* Modal transition styles */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.3s ease;

@@ -63,6 +63,7 @@
           {{ authStore.loading ? "Logging in..." : "Login" }}
         </button>
       </form>
+
       <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
         Don't have an account?
         <router-link
@@ -83,7 +84,7 @@ const email = ref("");
 const password = ref("");
 const authStore = useAuthStore();
 
-// --- FIX: Clear any previous auth errors when the component is mounted ---
+
 onMounted(() => {
   authStore.clearError();
 });
@@ -91,4 +92,7 @@ onMounted(() => {
 const handleLogin = () => {
   authStore.login({ email: email.value, password: password.value });
 };
+
+// --- NEW: Google OAuth URL ---
+const googleAuthUrl = "http://localhost:5000/api/auth/google"; // Adjust this to your backend's Google auth initiation route
 </script>

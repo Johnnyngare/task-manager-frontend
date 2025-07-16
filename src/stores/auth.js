@@ -2,50 +2,42 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-
-const API_URL = "http://localhost:5000/api/auth";
-const toast = useToast();
+import router from "../router";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    token: localStorage.getItem("token") || null,
-    user: JSON.parse(localStorage.getItem("user")) || null,
-    error: null,
+    user: null,
+    isAuthenticated: false,
     loading: false,
+    error: null, // This is the state that was "leaking"
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.token,
+    isUserAuthenticated: (state) => state.isAuthenticated,
+    getUser: (state) => state.user,
   },
 
   actions: {
-    // Helper to set the Axios default header for all requests
-    setAuthHeader(token) {
-      if (token) {
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-        // console.log("Axios Authorization header set:", axios.defaults.headers.common['Authorization']); // DEBUG
-      } else {
-        delete axios.defaults.headers.common["Authorization"];
-        // console.log("Axios Authorization header cleared."); // DEBUG
-      }
+    // --- NEW ACTION to clear error state ---
+    clearError() {
+      this.error = null;
     },
 
-    async register(userData, router) {
+    async login(credentials) {
+      // --- FIX: Clear previous errors on a new login attempt ---
+      this.clearError();
       this.loading = true;
-      this.error = null;
+      const toast = useToast();
+
       try {
-        const response = await axios.post(`${API_URL}/register`, userData);
-        this.token = response.data.token;
+        const response = await axios.post(`/auth/login`, credentials);
         this.user = response.data;
-        localStorage.setItem("token", this.token);
-        localStorage.setItem("user", JSON.stringify(this.user));
-        this.setAuthHeader(this.token); 
+        this.isAuthenticated = true;
+        toast.success(response.data.message || "Logged in successfully!");
         router.push("/tasks");
         return true;
       } catch (err) {
-        this.error =
-          err.response?.data?.message ||
-          "An error occurred during registration.";
+        this.error = err.response?.data?.message || "Invalid credentials.";
         toast.error(this.error);
         return false;
       } finally {
@@ -53,46 +45,64 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
-    async login(credentials, router) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await axios.post(`${API_URL}/login`, credentials);
-        this.token = response.data.token;
-        this.user = response.data;
-        localStorage.setItem("token", this.token);
-        localStorage.setItem("user", JSON.stringify(this.user));
-        this.setAuthHeader(this.token); 
-        router.push("/tasks");
-        return true;
-      } catch (err) {
-        this.error =
-          err.response?.data?.message || "Invalid credentials or server error.";
-        toast.error(this.error);
-        return false;
-      } finally {
-        this.loading = false;
+    async logout() {
+      const toast = useToast();
+      if (!this.isAuthenticated) {
+        if (router.currentRoute.value.name !== "Login") router.push("/login");
+        return;
       }
-    },
-
-    logout(router) {
-      this.token = null;
       this.user = null;
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      this.setAuthHeader(null); // <-- Ensure this is called
+      this.isAuthenticated = false;
+      this.clearError(); // Also clear errors on logout
       router.push("/login");
-      toast.info("You have been logged out.");
+      try {
+        await axios.get(`/auth/logout`);
+        toast.info("You have been logged out.");
+      } catch (err) {
+        console.error(
+          "Logout API call failed:",
+          err.response?.data?.message || err.message
+        );
+      }
+    },
+
+    // Other actions like register, fetchUserState remain the same...
+    async register(userData) {
+      this.clearError();
+      this.loading = true;
+      const toast = useToast();
+      try {
+        const response = await axios.post(`/auth/register`, userData);
+        this.user = response.data;
+        this.isAuthenticated = true;
+        toast.success(response.data.message || "Registration successful!");
+        router.push("/tasks");
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.message || "Registration failed.";
+        toast.error(this.error);
+        return false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchUserState() {
+      if (this.isAuthenticated) return;
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await axios.get(`/auth/me`);
+        this.user = response.data.user;
+        this.isAuthenticated = true;
+      } catch (err) {
+        this.user = null;
+        this.isAuthenticated = false;
+        this.error = err.response?.data?.message || "Session invalid.";
+        console.error("Failed to fetch user state:", this.error);
+      } finally {
+        this.loading = false;
+      }
     },
   },
 });
-
-// --- CRITICAL BLOCK: Set header on store initialization/app startup ---
-// This code runs *immediately* when the store is defined and imported.
-// It ensures that if a user just refreshed the page and has a token in localStorage,
-// Axios is configured *before* any component's onMounted tries to fetch data.
-const initialToken = localStorage.getItem("token");
-if (initialToken) {
-  axios.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
-  // console.log("Axios Authorization header set on initial store load."); // DEBUG
-}

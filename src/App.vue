@@ -11,7 +11,7 @@
 
         <!-- Desktop Navigation Links -->
         <div class="hidden md:flex items-center space-x-6">
-          <template v-if="authStore.isAuthenticated">
+          <template v-if="authStore.isUserAuthenticated">
             <router-link
               to="/tasks"
               class="hover:text-green-300 transition-colors"
@@ -22,7 +22,6 @@
               class="hover:text-green-300 transition-colors"
               >Calendar</router-link
             >
-            <!-- NEW LINK: Desktop Calendar Link -->
             <UserDropdown />
           </template>
           <template v-else>
@@ -86,7 +85,7 @@
         v-if="isMobileNavOpen"
         class="md:hidden bg-slate-700 text-slate-200 p-4 space-y-2 shadow-inner"
       >
-        <template v-if="authStore.isAuthenticated">
+        <template v-if="authStore.isUserAuthenticated">
           <router-link
             @click="closeMobileNav"
             to="/tasks"
@@ -99,10 +98,8 @@
             class="block py-2 px-3 hover:bg-slate-600 rounded"
             >Calendar</router-link
           >
-          <!-- NEW LINK: Mobile Calendar Link -->
-          <!-- Display username in mobile nav -->
           <span class="block py-2 px-3 text-sm text-slate-400">{{
-            authStore.user?.username
+            authStore.getUser?.username
           }}</span>
           <button
             @click="handleLogoutAndCloseNav"
@@ -143,7 +140,6 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
-import axios from "axios";
 import UserDropdown from "./components/UserDropdown.vue";
 
 const router = useRouter();
@@ -159,8 +155,7 @@ const closeMobileNav = () => {
 };
 
 const handleLogout = () => {
-  authStore.logout(router);
-  closeMobileNav();
+  authStore.logout();
 };
 
 const handleLogoutAndCloseNav = () => {
@@ -169,11 +164,8 @@ const handleLogoutAndCloseNav = () => {
 };
 
 onMounted(() => {
-  if (authStore.token && !axios.defaults.headers.common["Authorization"]) {
-    axios.defaults.headers.common[
-      "Authorization"
-    ] = `Bearer ${authStore.token}`;
-  }
+  // This is the correct way to initialize the session state on app load.
+  authStore.fetchUserState();
 });
 
 router.afterEach(() => {

@@ -9,7 +9,6 @@
       >
         Login
       </h2>
-
       <!-- Display error message from the auth store -->
       <div
         v-if="authStore.error"

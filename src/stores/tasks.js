@@ -6,7 +6,6 @@ import { useToast } from "vue-toastification"; // For toasts
 
 // FIX #1: The API URL should match the backend routes, which are prefixed with /api
 const API_URL = "/api/tasks";
-
 export const useTasksStore = defineStore("tasks", {
   state: () => ({
     tasks: [],

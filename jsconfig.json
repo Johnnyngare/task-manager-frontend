@@ -2,7 +2,9 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // Add this "types" array
+    "types": ["jest", "node", "jsdom"]
   },
   "exclude": ["node_modules", "dist"]
 }

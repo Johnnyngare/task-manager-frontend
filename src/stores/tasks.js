@@ -4,8 +4,8 @@ import axios from "axios";
 import { useAuthStore } from "./auth"; // To check authentication status
 import { useToast } from "vue-toastification"; // For toasts
 
-// BaseURL is now set in main.js, so we can use relative paths
-const API_URL = "/tasks";
+// FIX #1: The API URL should match the backend routes, which are prefixed with /api
+const API_URL = "/api/tasks";
 
 export const useTasksStore = defineStore("tasks", {
   state: () => ({
@@ -34,10 +34,13 @@ export const useTasksStore = defineStore("tasks", {
         this.tasks = response.data;
         return true;
       } catch (err) {
-        // --- SIMPLIFIED CATCH BLOCK ---
         // The global interceptor handles 401s. This block now only handles other errors.
         if (err.response?.status !== 401) {
-          this.error = err.response?.data?.message || "Failed to fetch tasks.";
+          // Use err.message to match the test's mock error
+          this.error =
+            err.response?.data?.message ||
+            err.message ||
+            "Failed to fetch tasks.";
           toast.error(this.error);
         }
         return false;
@@ -46,8 +49,8 @@ export const useTasksStore = defineStore("tasks", {
       }
     },
 
-    // Action to add a new task
-    async addTask(taskData) {
+    // FIX #2: Renamed from 'addTask' to 'createTask' to match the test file
+    async createTask(taskData) {
       const authStore = useAuthStore();
       const toast = useToast();
 

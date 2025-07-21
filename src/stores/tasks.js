@@ -1,141 +1,95 @@
 // src/stores/tasks.js
 import { defineStore } from "pinia";
 import axios from "axios";
-import { useAuthStore } from "./auth"; // To check authentication status
-import { useToast } from "vue-toastification"; // For toasts
+import { useToast } from "vue-toastification";
 
-// FIX #1: The API URL should match the backend routes, which are prefixed with /api
-const API_URL = "/tasks";
 export const useTasksStore = defineStore("tasks", {
   state: () => ({
     tasks: [],
     loading: false,
     error: null,
   }),
+
+  getters: {
+    // You can add getters here if needed, e.g., filteredTasks
+  },
+
   actions: {
-    // Action to fetch all tasks for the authenticated user
-    async fetchTasks(filters = {}) {
-      const authStore = useAuthStore();
-      const toast = useToast();
-
-      if (!authStore.isUserAuthenticated) {
-        this.error = "Not authenticated. Please log in.";
-        return false;
-      }
-
+    async fetchTasks() {
       this.loading = true;
       this.error = null;
-
       try {
-        const response = await axios.get(API_URL, {
-          params: filters,
-        });
-        this.tasks = response.data;
-        return true;
+        const response = await axios.get("/tasks"); // Use relative path
+        this.tasks = response.data.tasks;
       } catch (err) {
-        // The global interceptor handles 401s. This block now only handles other errors.
-        if (err.response?.status !== 401) {
-          // Use err.message to match the test's mock error
-          this.error =
-            err.response?.data?.message ||
-            err.message ||
-            "Failed to fetch tasks.";
-          toast.error(this.error);
-        }
-        return false;
+        this.error = err.response?.data?.message || "Failed to fetch tasks.";
+        console.error("Error fetching tasks:", err);
       } finally {
         this.loading = false;
       }
     },
 
-    // FIX #2: Renamed from 'addTask' to 'createTask' to match the test file
-    async createTask(taskData) {
-      const authStore = useAuthStore();
-      const toast = useToast();
-
-      if (!authStore.isUserAuthenticated) {
-        toast.error("Not authenticated. Please log in.");
-        return false;
-      }
-
+    // --- ADDED: Action to add a new task ---
+    async addTask(taskData) {
       this.loading = true;
       this.error = null;
-
+      const toast = useToast();
       try {
-        const response = await axios.post(API_URL, taskData);
-        this.tasks.unshift(response.data);
+        const response = await axios.post("/tasks", taskData); // Use relative path
+        this.tasks.unshift(response.data.task); // Add the new task to the start of the list
         toast.success("Task added successfully!");
-        return true;
+        return true; // Indicate success
       } catch (err) {
-        if (err.response?.status !== 401) {
-          this.error = err.response?.data?.message || "Failed to add task.";
-          toast.error(this.error);
-        }
-        return false;
+        this.error = err.response?.data?.message || "Failed to add task.";
+        toast.error(this.error);
+        console.error("Error adding task:", err);
+        return false; // Indicate failure
       } finally {
         this.loading = false;
       }
     },
 
-    // Action to update an existing task
-    async updateTask(taskId, updatedData) {
-      const authStore = useAuthStore();
-      const toast = useToast();
-
-      if (!authStore.isUserAuthenticated) {
-        toast.error("Not authenticated. Please log in.");
-        return false;
-      }
-
+    async updateTask(taskId, taskData) {
       this.loading = true;
       this.error = null;
-
+      const toast = useToast();
       try {
-        const response = await axios.put(`${API_URL}/${taskId}`, updatedData);
+        const response = await axios.put(`/tasks/${taskId}`, taskData); // Use relative path
         const index = this.tasks.findIndex((task) => task._id === taskId);
         if (index !== -1) {
-          this.tasks[index] = response.data;
+          this.tasks[index] = response.data.task; // Update the task in the array
         }
         toast.success("Task updated successfully!");
-        return true;
+        return true; // Indicate success
       } catch (err) {
-        if (err.response?.status !== 401) {
-          this.error = err.response?.data?.message || "Failed to update task.";
-          toast.error(this.error);
-        }
-        return false;
+        this.error = err.response?.data?.message || "Failed to update task.";
+        toast.error(this.error);
+        console.error("Error updating task:", err);
+        return false; // Indicate failure
       } finally {
         this.loading = false;
       }
     },
 
-    // Action to delete a task
     async deleteTask(taskId) {
-      const authStore = useAuthStore();
-      const toast = useToast();
-
-      if (!authStore.isUserAuthenticated) {
-        toast.error("Not authenticated. Please log in.");
-        return false;
-      }
-
       this.loading = true;
       this.error = null;
-
+      const toast = useToast();
       try {
-        await axios.delete(`${API_URL}/${taskId}`);
+        await axios.delete(`/tasks/${taskId}`); // Use relative path
         this.tasks = this.tasks.filter((task) => task._id !== taskId);
         toast.success("Task deleted successfully!");
         return true;
       } catch (err) {
-        if (err.response?.status !== 401) {
-          this.error = err.response?.data?.message || "Failed to delete task.";
-          toast.error(this.error);
-        }
+        this.error = err.response?.data?.message || "Failed to delete task.";
+        toast.error(this.error);
+        console.error("Error deleting task:", err);
         return false;
       } finally {
         this.loading = false;
       }
     },
+
+    // You can add other task-related actions here
   },
 });

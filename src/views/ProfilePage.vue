@@ -240,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue"; // Added 'watch'
+import { ref, onMounted, computed, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useTasksStore } from "../stores/tasks";
 import { useToast } from "vue-toastification";
@@ -316,24 +316,26 @@ const uploadProfileImage = async () => {
 
   try {
     const response = await axios.put(
-      "http://localhost:5000/api/users/profile-image",
+      "/users/profile-image", // UPDATED: Use relative path
       formData,
       {
         headers: {
           "Content-Type": "multipart/form-data", // Crucial for file uploads
-          Authorization: `Bearer ${authStore.token}`,
+          // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
         },
       }
     );
 
-    if (authStore.setUser) {
-      // Check if setUser exists
-      authStore.setUser({
+    // Assuming your backend responds with the updated profileImageUrl
+    // You'll need to make sure your backend's update route returns the updated user or just the URL
+    if (response.data.profileImageUrl) {
+      // Create a new user object with the updated profileImageUrl
+      const updatedUser = {
         ...authStore.user,
         profileImageUrl: response.data.profileImageUrl,
-      });
-    } else {
-      authStore.user.profileImageUrl = response.data.profileImageUrl; // This directly updates the reactive Pinia state
+      };
+      // Update the Pinia store user state
+      authStore.user = updatedUser;
     }
 
     toast.success("Profile picture updated!");
@@ -355,17 +357,16 @@ const removeProfileImage = async () => {
   uploadError.value = null;
 
   try {
-    await axios.delete("http://localhost:5000/api/users/profile-image", {
+    await axios.delete("/users/profile-image", {
+      // UPDATED: Use relative path
       headers: {
-        Authorization: `Bearer ${authStore.token}`,
+        // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
       },
     });
     // Update user state in Pinia store to null the image URL
-    if (authStore.setUser) {
-      authStore.setUser({ ...authStore.user, profileImageUrl: null });
-    } else {
-      authStore.user.profileImageUrl = null;
-    }
+    // Create a new user object with profileImageUrl set to null
+    const updatedUser = { ...authStore.user, profileImageUrl: null };
+    authStore.user = updatedUser;
     toast.success("Profile picture removed!");
     displayImageUrl.value = null; // Clear preview
   } catch (error) {
@@ -399,28 +400,25 @@ watch(
 const handleUpdateProfile = async () => {
   try {
     const response = await axios.put(
-      "http://localhost:5000/api/users/profile",
+      "/users/profile", // UPDATED: Use relative path
       {
         phoneNumber: userProfile.value.phoneNumber, // Only send changed fields
         // You could send username, etc. here if they become editable
       },
       {
         headers: {
-          Authorization: `Bearer ${authStore.token}`,
+          // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
         },
       }
     );
-    // Assuming backend sends back updated user object, update Pinia store and localStorage
-    if (authStore.setUser) {
-      authStore.setUser(response.data.user);
-    } else {
-      // Manually update if setUser is not defined in authStore
-      Object.assign(authStore.user, response.data.user);
-      localStorage.setItem("user", JSON.stringify(authStore.user));
-    }
+    // Assuming backend sends back updated user object, update Pinia store
+    // Create a new user object with the updated profile data
+    const updatedUser = { ...authStore.user, ...response.data.user };
+    authStore.user = updatedUser;
     toast.success("Profile updated successfully!");
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to update profile.");
+    console.error("Profile update error:", error);
   }
 };
 
@@ -442,8 +440,8 @@ const pendingTasksCount = computed(
 
 // Fetch tasks for stats when component mounts
 onMounted(() => {
-  if (authStore.isAuthenticated && tasksStore.tasks.length === 0) {
-    tasksStore.fetchTasks(); // Only fetch if tasks aren't already loaded
+  if (authStore.isAuthenticated) {
+    tasksStore.fetchTasks(); // Always fetch if authenticated
   }
   // Initialize dark mode state from localStorage or system preference
   isDarkMode.value =
@@ -461,29 +459,31 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString(undefined, options);
 };
 
-// Handle Password Change (Dummy API call for now)
+// Handle Password Change
 const handleChangePassword = async () => {
   if (newPassword.value !== confirmNewPassword.value) {
     toast.error("New passwords do not match.");
     return;
   }
   if (newPassword.value.length < 6) {
-    // Basic validation
     toast.error("New password must be at least 6 characters long.");
     return;
   }
 
-  // --- Dummy API Call for Password Update (Backend Feature to Add Later) ---
-  // ... (existing dummy implementation) ...
-
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Password updated successfully!");
+    // API call to your backend for password change
+    // This assumes your backend has a PUT /api/auth/change-password endpoint
+    const response = await axios.put("/auth/change-password", {
+      currentPassword: currentPassword.value,
+      newPassword: newPassword.value,
+    });
+    toast.success(response.data.message || "Password updated successfully!");
     currentPassword.value = "";
     newPassword.value = "";
     confirmNewPassword.value = "";
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to update password.");
+    console.error("Change password error:", error);
   }
 };
 

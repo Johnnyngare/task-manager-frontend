@@ -74,7 +74,7 @@
         ></div>
       </div>
 
-      <!-- Google Login Button (NEW) -->
+      <!-- Google Login Button (Corrected) -->
       <a
         :href="googleAuthUrl"
         class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-lg shadow-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-600 flex items-center justify-center gap-3"
@@ -133,6 +133,11 @@ const handleLogin = () => {
   authStore.login({ email: email.value, password: password.value });
 };
 
-// --- NEW: Google OAuth URL ---
-const googleAuthUrl = "http://localhost:5000/api/auth/google"; // Adjust this to your backend's Google auth initiation route
+// --- FIX APPLIED HERE ---
+// Construct the full, dynamic URL for Google authentication.
+// It uses the environment variable for the deployed backend URL,
+// and falls back to localhost for local development.
+const googleAuthUrl = `${
+  import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:5000/api"
+}/auth/google`;
 </script>

@@ -14,7 +14,8 @@ const pinia = createPinia();
 app.use(pinia);
 
 // --- AXIOS GLOBAL CONFIGURATION ---
-axios.defaults.baseURL = "http://localhost:5000/api";
+axios.defaults.baseURL =
+  import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:5000/api";
 axios.defaults.withCredentials = true; // Crucial: Tells Axios to send cookies
 
 // --- AXIOS REQUEST INTERCEPTOR ---

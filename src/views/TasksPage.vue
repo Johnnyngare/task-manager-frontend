@@ -105,7 +105,7 @@
       <span class="block sm:inline">Error: {{ tasksStore.error }}</span>
     </div>
     <div
-      v-else-if="tasksStore.tasks.length === 0"
+      v-else-if="!tasksStore.tasks || tasksStore.tasks.length === 0"
       class="text-center text-slate-500 dark:text-slate-400 py-12 bg-white dark:bg-slate-800 rounded-xl shadow-lg"
     >
       <p class="text-lg">

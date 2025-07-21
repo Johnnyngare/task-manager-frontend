@@ -80,7 +80,7 @@ onMounted(() => {
 
 // 1. Transform tasks from Pinia store into FullCalendar event format
 const calendarEvents = computed(() => {
-  return tasksStore.tasks
+  return (tasksStore.tasks || [])
     .filter((task) => task.dueDate) // Only include tasks with a due date
     .map((task) => ({
       id: task._id, // Use backend task ID as event ID

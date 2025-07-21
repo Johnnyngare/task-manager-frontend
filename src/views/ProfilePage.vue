@@ -144,7 +144,7 @@
       <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg shadow-sm">
           <p class="text-3xl font-bold text-green-600">
-            {{ tasksStore.tasks.length }}
+            {{ (tasksStore.tasks || []).length }}
           </p>
           <p class="text-slate-600 dark:text-slate-300">Total Tasks</p>
         </div>
@@ -244,21 +244,18 @@ import { ref, onMounted, computed, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useTasksStore } from "../stores/tasks";
 import { useToast } from "vue-toastification";
-import axios from "axios"; // For API calls
+import axios from "axios";
 
 const authStore = useAuthStore();
 const tasksStore = useTasksStore();
 const toast = useToast();
 
-// --- Profile Image Upload Refs and Logic ---
 const fileInput = ref(null);
 const selectedFile = ref(null);
-// Initialize displayImageUrl from authStore.user or null
 const displayImageUrl = ref(authStore.user?.profileImageUrl || null);
 const isUploading = ref(false);
 const uploadError = ref(null);
 
-// Watch for changes in authStore.user to update displayImageUrl if user data changes
 watch(
   () => authStore.user?.profileImageUrl,
   (newUrl) => {
@@ -276,28 +273,22 @@ const handleFileChange = (event) => {
     if (!file.type.startsWith("image/")) {
       uploadError.value = "Please upload an image file.";
       selectedFile.value = null;
-      displayImageUrl.value = authStore.user?.profileImageUrl; // Revert preview
+      displayImageUrl.value = authStore.user?.profileImageUrl;
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      // 2MB limit
       uploadError.value = "Image size exceeds 2MB limit.";
       selectedFile.value = null;
-      displayImageUrl.value = authStore.user?.profileImageUrl; // Revert preview
+      displayImageUrl.value = authStore.user?.profileImageUrl;
       return;
     }
-
     selectedFile.value = file;
     uploadError.value = null;
-
-    // Client-side preview
     const reader = new FileReader();
     reader.onload = (e) => {
       displayImageUrl.value = e.target.result;
     };
     reader.readAsDataURL(file);
-
-    // Automatically upload after selection (optional, or require explicit button click)
     uploadProfileImage();
   }
 };
@@ -307,44 +298,24 @@ const uploadProfileImage = async () => {
     uploadError.value = "No file selected to upload.";
     return;
   }
-
   isUploading.value = true;
   uploadError.value = null;
-
   const formData = new FormData();
   formData.append("profileImage", selectedFile.value);
-
   try {
-    const response = await axios.put(
-      "/users/profile-image", // UPDATED: Use relative path
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data", // Crucial for file uploads
-          // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
-        },
-      }
-    );
-
-    // Assuming your backend responds with the updated profileImageUrl
-    // You'll need to make sure your backend's update route returns the updated user or just the URL
+    const response = await axios.put("/users/profile-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     if (response.data.profileImageUrl) {
-      // Create a new user object with the updated profileImageUrl
-      const updatedUser = {
-        ...authStore.user,
-        profileImageUrl: response.data.profileImageUrl,
-      };
-      // Update the Pinia store user state
-      authStore.user = updatedUser;
+      authStore.user.profileImageUrl = response.data.profileImageUrl;
     }
-
     toast.success("Profile picture updated!");
-    selectedFile.value = null; // Clear selected file
+    selectedFile.value = null;
   } catch (error) {
     console.error("Profile image upload failed:", error);
     uploadError.value =
       error.response?.data?.message || "Failed to upload image.";
-    displayImageUrl.value = authStore.user?.profileImageUrl; // Revert preview on error
+    displayImageUrl.value = authStore.user?.profileImageUrl;
   } finally {
     isUploading.value = false;
   }
@@ -352,23 +323,13 @@ const uploadProfileImage = async () => {
 
 const removeProfileImage = async () => {
   if (!confirm("Are you sure you want to remove your profile picture?")) return;
-
   isUploading.value = true;
   uploadError.value = null;
-
   try {
-    await axios.delete("/users/profile-image", {
-      // UPDATED: Use relative path
-      headers: {
-        // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
-      },
-    });
-    // Update user state in Pinia store to null the image URL
-    // Create a new user object with profileImageUrl set to null
-    const updatedUser = { ...authStore.user, profileImageUrl: null };
-    authStore.user = updatedUser;
+    await axios.delete("/users/profile-image");
+    authStore.user.profileImageUrl = null;
     toast.success("Profile picture removed!");
-    displayImageUrl.value = null; // Clear preview
+    displayImageUrl.value = null;
   } catch (error) {
     console.error("Failed to remove profile image:", error);
     uploadError.value =
@@ -378,14 +339,10 @@ const removeProfileImage = async () => {
   }
 };
 
-// --- Phone Number Ref and Logic ---
-// Initialize with current user's phone number or empty string
 const userProfile = ref({
   phoneNumber: authStore.user?.phoneNumber || "",
 });
 
-// Watch for changes in authStore.user to populate userProfile when it loads/changes
-// This makes sure the form displays the actual data from the store
 watch(
   () => authStore.user,
   (newUser) => {
@@ -394,27 +351,14 @@ watch(
     }
   },
   { immediate: true }
-); // Populate on initial mount
+);
 
-// Backend API route for this would be PUT /api/users/profile
 const handleUpdateProfile = async () => {
   try {
-    const response = await axios.put(
-      "/users/profile", // UPDATED: Use relative path
-      {
-        phoneNumber: userProfile.value.phoneNumber, // Only send changed fields
-        // You could send username, etc. here if they become editable
-      },
-      {
-        headers: {
-          // REMOVED: Authorization: `Bearer ${authStore.token}`, // NOT NEEDED with httpOnly cookies
-        },
-      }
-    );
-    // Assuming backend sends back updated user object, update Pinia store
-    // Create a new user object with the updated profile data
-    const updatedUser = { ...authStore.user, ...response.data.user };
-    authStore.user = updatedUser;
+    const response = await axios.put("/users/profile", {
+      phoneNumber: userProfile.value.phoneNumber,
+    });
+    authStore.user = { ...authStore.user, ...response.data.user };
     toast.success("Profile updated successfully!");
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to update profile.");
@@ -422,33 +366,31 @@ const handleUpdateProfile = async () => {
   }
 };
 
-// Password change form refs
 const currentPassword = ref("");
 const newPassword = ref("");
 const confirmNewPassword = ref("");
-
-// Dark mode ref
 const isDarkMode = ref(false);
 
-// Computed properties for task stats
+// --- FIX: Make computed properties defensive ---
 const completedTasksCount = computed(
-  () => tasksStore.tasks.filter((task) => task.status === "completed").length
+  () =>
+    (tasksStore.tasks || []).filter((task) => task.status === "completed")
+      .length
 );
 const pendingTasksCount = computed(
-  () => tasksStore.tasks.filter((task) => task.status === "pending").length
+  () =>
+    (tasksStore.tasks || []).filter((task) => task.status === "pending").length
 );
 
-// Fetch tasks for stats when component mounts
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    tasksStore.fetchTasks(); // Always fetch if authenticated
+    tasksStore.fetchTasks();
   }
-  // Initialize dark mode state from localStorage or system preference
   isDarkMode.value =
     localStorage.theme === "dark" ||
     (!("theme" in localStorage) &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
-  updateHtmlClass(); // Apply initial theme
+  updateHtmlClass();
 });
 
 const formatDate = (dateString) => {
@@ -459,7 +401,6 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString(undefined, options);
 };
 
-// Handle Password Change
 const handleChangePassword = async () => {
   if (newPassword.value !== confirmNewPassword.value) {
     toast.error("New passwords do not match.");
@@ -469,10 +410,7 @@ const handleChangePassword = async () => {
     toast.error("New password must be at least 6 characters long.");
     return;
   }
-
   try {
-    // API call to your backend for password change
-    // This assumes your backend has a PUT /api/auth/change-password endpoint
     const response = await axios.put("/auth/change-password", {
       currentPassword: currentPassword.value,
       newPassword: newPassword.value,
@@ -487,7 +425,6 @@ const handleChangePassword = async () => {
   }
 };
 
-// Dark Mode Toggle Logic
 const updateHtmlClass = () => {
   if (isDarkMode.value) {
     document.documentElement.classList.add("dark");
@@ -505,20 +442,17 @@ const toggleTheme = () => {
 </script>
 
 <style scoped>
-/* Styles for the custom toggle switch (Tailwind doesn't have one out of the box) */
 .switch {
   position: relative;
   display: inline-block;
   width: 60px;
   height: 34px;
 }
-
 .switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
-
 .slider {
   position: absolute;
   cursor: pointer;
@@ -530,7 +464,6 @@ const toggleTheme = () => {
   -webkit-transition: 0.4s;
   transition: 0.4s;
 }
-
 .slider:before {
   position: absolute;
   content: "";
@@ -542,27 +475,20 @@ const toggleTheme = () => {
   -webkit-transition: 0.4s;
   transition: 0.4s;
 }
-
 input:checked + .slider {
-  background-color: #2196f3; /* Green background for active */
-  background-color: #10b981; /* Tailwind green-500 */
+  background-color: #10b981;
 }
-
 input:focus + .slider {
   box-shadow: 0 0 1px #10b981;
 }
-
 input:checked + .slider:before {
   -webkit-transform: translateX(26px);
   -ms-transform: translateX(26px);
   transform: translateX(26px);
 }
-
-/* Rounded sliders */
 .slider.round {
   border-radius: 34px;
 }
-
 .slider.round:before {
   border-radius: 50%;
 }

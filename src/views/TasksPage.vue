@@ -119,8 +119,8 @@
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
     >
       <TaskItem
-        v-for="task in tasksStore.tasks"
-        :key="task._id"
+        v-for="task in tasksStore.tasks || []"
+        :key="task?._id"
         :task="task"
         @edit-task="openEditTaskForm"
         @delete-task="handleDeleteTask"

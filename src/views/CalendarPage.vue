@@ -52,9 +52,6 @@
 </template>
 
 <script setup>
-// CSS imports are no longer needed for FullCalendar v6+.
-// The JavaScript plugins now handle their own styles automatically.
-
 import { ref, onMounted, computed } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -71,82 +68,63 @@ const toast = useToast();
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    // Only fetch if authenticated
-    tasksStore.fetchTasks(); // Fetch tasks when component mounts
+    tasksStore.fetchTasks();
   }
 });
 
-// --- FullCalendar Event Handling ---
-
-// 1. Transform tasks from Pinia store into FullCalendar event format
 const calendarEvents = computed(() => {
   return (tasksStore.tasks || [])
-    .filter((task) => task.dueDate) // Only include tasks with a due date
+    .filter((task) => task && task.dueDate)
     .map((task) => ({
-      id: task._id, // Use backend task ID as event ID
+      id: task._id,
       title: task.title,
-      start: task.dueDate, // FullCalendar uses 'start' for event date
-      allDay: true, // Assuming tasks are all-day events unless you have start/end times
+      start: task.dueDate,
+      allDay: true,
       classNames:
         task.status === "completed"
           ? ["fc-event-completed"]
-          : ["fc-event-pending"], // Custom classes for styling
-      color: task.status === "completed" ? "#10B981" : "#F59E0B", // Tailwind green-500, yellow-500
+          : ["fc-event-pending"],
+      color: task.status === "completed" ? "#10B981" : "#F59E0B",
       extendedProps: {
-        // Store original task data if needed for eventClick
         description: task.description,
         status: task.status,
       },
     }));
 });
 
-// 2. Define FullCalendar Options
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  initialView: "dayGridMonth", // Default view when calendar loads
-  events: calendarEvents, // This reactive computed property feeds events to the calendar
-
-  // --- Header Toolbar ---
+  initialView: "dayGridMonth",
+  events: calendarEvents,
   headerToolbar: {
     left: "prev,next today",
     center: "title",
-    right: "dayGridMonth,timeGridWeek,timeGridDay", // Views available in the header
+    right: "dayGridMonth,timeGridWeek,timeGridDay",
   },
+  editable: true,
+  selectable: true,
 
-  // --- Interaction (Drag & Drop, Clicking) ---
-  editable: true, // Allows drag & drop event resizing and moving
-  selectable: true, // Allows users to select dates on the calendar
-  // eventDurationEditable: true, // If your tasks have start/end times
-
-  // Callbacks for interactions
   eventClick: function (info) {
-    // Fired when an event (task) is clicked
     alert(
       "Task: " +
         info.event.title +
         "\nStatus: " +
         info.event.extendedProps.status
     );
-    // You could open a modal here to show task details or allow editing
-    // Example: openEditTaskForm(tasksStore.tasks.find(t => t._id === info.event.id));
   },
   dateClick: function (info) {
-    // Fired when a date is clicked
     alert("Clicked on date: " + info.dateStr);
-    // You could open a new task modal here and pre-fill the due date
-    // Example: openAddTaskFormWithDate(info.dateStr);
   },
   eventDrop: async function (info) {
-    // Fired when an event is dragged and dropped to a new date
-    const updatedDueDate = info.event.startStr; // The new date
-    const taskId = info.event.id; // The task's _id
+    const updatedDueDate = info.event.startStr;
+    const taskId = info.event.id;
 
     if (
       !confirm(
         `Are you sure you want to reschedule "${info.event.title}" to ${updatedDueDate}?`
       )
     ) {
-      info.revert(); // If user cancels, revert the change
+      info.revert();
       return;
     }
 
@@ -157,25 +135,15 @@ const calendarOptions = ref({
       );
     } catch (error) {
       toast.error("Failed to reschedule task.");
-      info.revert(); // Revert on API error
+      info.revert();
     }
   },
-  // eventResize: function(info) { // If you had duration for tasks
-  //   // Fired when an event's duration is resized
-  //   alert('Event resized to ' + info.event.endStr);
-  //   // You'd update tasksStore.updateTask here with new end date
-  // },
-
-  // --- Custom Styling (Tailwind-like colors) ---
-  // Event styling
-  eventColor: "#378006", // Default event background color (if not set per event)
-  eventTextColor: "#ffffff", // Default event text color
-  // You can override FullCalendar's default button/background colors with global CSS if needed.
+  eventColor: "#378006",
+  eventTextColor: "#ffffff",
 });
 </script>
 
 <style>
-/* Keep your custom styling here */
 .fc-button-primary {
   @apply bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors;
 }
@@ -185,7 +153,7 @@ const calendarOptions = ref({
 }
 
 .fc-event-completed {
-  @apply bg-green-500 !important; /* Use !important to override FullCalendar's default */
+  @apply bg-green-500 !important;
   border-color: theme("colors.green.600") !important;
 }
 

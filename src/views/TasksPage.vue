@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, nextTick } from "vue"; // FIX: Import nextTick
 import { useTasksStore } from "../stores/tasks";
 import { useAuthStore } from "../stores/auth";
 import TaskItem from "../components/TaskItem.vue";
@@ -188,9 +188,11 @@ const openEditTaskForm = (task) => {
   showTaskForm.value = true;
 };
 
-const handleTaskSaved = () => {
+// FIX: Ensure modal is fully closed before re-fetching data
+const handleTaskSaved = async () => {
   showTaskForm.value = false;
   editingTask.value = null;
+  await nextTick(); // Wait for the DOM update (modal removal)
   fetchTasksWithFilters();
 };
 

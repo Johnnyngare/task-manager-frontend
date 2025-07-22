@@ -129,44 +129,55 @@ watch(
   () => props.taskToEdit,
   (newTask) => {
     if (newTask) {
-      // Populate form with task data
       taskForm.value = { ...newTask };
-      // Format dueDate for HTML input type="date"
       if (taskForm.value.dueDate) {
-        taskForm.value.dueDate = new Date(taskForm.value.dueDate)
-          .toISOString()
-          .split("T")[0];
+        // FIX: Ensure it's a valid Date object before formatting to YYYY-MM-DD for input type="date"
+        const date = new Date(taskForm.value.dueDate);
+        if (!isNaN(date.getTime())) {
+          taskForm.value.dueDate = date.toISOString().split("T")[0]; // Format to "YYYY-MM-DD"
+        } else {
+          taskForm.value.dueDate = ""; // Clear if invalid date
+        }
+      } else {
+        taskForm.value.dueDate = ""; // Ensure empty string if null/undefined
       }
     } else {
-      // Reset form when no taskToEdit is provided (e.g., when opening for adding)
       Object.assign(taskForm.value, initialFormState);
     }
   },
   { immediate: true }
-); // Run immediately on component mount if taskToEdit is already present
+);
 
 const handleSubmit = async () => {
-  // Ensure dueDate is null if empty string, as backend expects null
   const dataToSend = { ...taskForm.value };
+
+  // FIX: Convert dueDate to YYYY-MM-DD string or null before sending to backend
   if (dataToSend.dueDate === "") {
     dataToSend.dueDate = null;
+  } else if (dataToSend.dueDate) {
+    const date = new Date(dataToSend.dueDate);
+    if (!isNaN(date.getTime())) {
+      dataToSend.dueDate = date.toISOString().split("T")[0]; // Send as "YYYY-MM-DD"
+    } else {
+      console.warn(
+        "Invalid dueDate detected for submission, sending as null:",
+        dataToSend.dueDate
+      );
+      dataToSend.dueDate = null; // Send null if invalid date
+    }
   }
 
   let success = false;
   if (props.taskToEdit) {
-    // Editing existing task
     success = await tasksStore.updateTask(props.taskToEdit._id, dataToSend);
   } else {
-    // Adding new task
     success = await tasksStore.addTask(dataToSend);
   }
 
   if (success) {
-    emit("task-saved"); // Inform parent that task was saved
-    emit("close"); // Close the form
-    // FIX: Ensure form is reset AFTER emits, so parent has time to react before cleanup
-    Object.assign(taskForm.value, initialFormState); // Reset form state
+    emit("task-saved");
+    emit("close");
+    Object.assign(taskForm.value, initialFormState);
   }
-  // Error handling is managed by the Pinia store which shows a toast
 };
 </script>

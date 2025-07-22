@@ -98,9 +98,10 @@
             class="block py-2 px-3 hover:bg-slate-600 rounded"
             >Calendar</router-link
           >
-          <span class="block py-2 px-3 text-sm text-slate-400">{{
-            authStore.getUser?.username
-          }}</span>
+          <!-- FIX: Integrate UserDropdown for mobile -->
+          <div class="py-2 px-3">
+            <UserDropdown :is-mobile="true" @close-nav="closeMobileNav" />
+          </div>
           <button
             @click="handleLogoutAndCloseNav"
             class="block py-2 px-3 w-full text-left hover:bg-slate-600 rounded"
@@ -126,7 +127,8 @@
     </Transition>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto">
+    <main class="flex-1 p-4 sm:p-6 md:p-10">
+      <!-- FIX: Removed overflow-y-auto from here -->
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -164,7 +166,6 @@ const handleLogoutAndCloseNav = () => {
 };
 
 onMounted(() => {
-  // This is the correct way to initialize the session state on app load.
   authStore.fetchUserState();
 });
 

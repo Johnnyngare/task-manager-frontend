@@ -45,14 +45,15 @@
         >
       </div>
       <div v-else>
-        <FullCalendar :options="calendarOptions" />
+        <!-- FIX: Add a ref to the FullCalendar component -->
+        <FullCalendar :options="currentCalendarOptions" ref="fullCalendarRef" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted, watch } from "vue"; // FIX: Import watch
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -66,54 +67,94 @@ const tasksStore = useTasksStore();
 const authStore = useAuthStore();
 const toast = useToast();
 
+const fullCalendarRef = ref(null); // --- FIX: Create a ref for the calendar component ---
+
+const mobileHeaderToolbar = {
+  left: "prev,next",
+  center: "title",
+  right: "today,dayGridMonth",
+};
+
+const desktopHeaderToolbar = {
+  left: "prev,next today",
+  center: "title",
+  right: "dayGridMonth,timeGridWeek,timeGridDay",
+};
+
+const screenWidth = ref(window.innerWidth);
+
+const updateScreenWidth = () => {
+  screenWidth.value = window.innerWidth;
+};
+
 onMounted(() => {
   if (authStore.isAuthenticated) {
     tasksStore.fetchTasks();
   }
+  window.addEventListener("resize", updateScreenWidth);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", updateScreenWidth);
 });
 
 const calendarEvents = computed(() => {
   return (tasksStore.tasks || [])
     .filter((task) => task && task.dueDate)
-    .map((task) => ({
-      id: task._id,
-      title: task.title,
-      start: task.dueDate,
-      allDay: true,
-      classNames:
-        task.status === "completed"
-          ? ["fc-event-completed"]
-          : ["fc-event-pending"],
-      color: task.status === "completed" ? "#10B981" : "#F59E0B",
-      extendedProps: {
-        description: task.description,
-        status: task.status,
-      },
-    }));
+    .map((task) => {
+      const dateObj = new Date(task.dueDate);
+      const formattedStartDate = !isNaN(dateObj.getTime())
+        ? dateObj.toISOString().split("T")[0]
+        : null;
+
+      return {
+        id: task._id,
+        title: task.title,
+        start: formattedStartDate,
+        allDay: true,
+        classNames:
+          task.status === "completed"
+            ? ["fc-event-completed"]
+            : ["fc-event-pending"],
+        extendedProps: {
+          description: task.description,
+          status: task.status,
+        },
+      };
+    });
 });
 
-const calendarOptions = ref({
+// --- FIX: Watch for changes in calendarEvents and force a refetch ---
+watch(calendarEvents, () => {
+  if (fullCalendarRef.value) {
+    const calendarApi = fullCalendarRef.value.getApi();
+    // This tells FullCalendar to re-evaluate its event sources and redraw.
+    calendarApi.refetchEvents();
+  }
+});
+
+const currentCalendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  initialView: "dayGridMonth",
-  events: calendarEvents,
-  headerToolbar: {
-    left: "prev,next today",
-    center: "title",
-    right: "dayGridMonth,timeGridWeek,timeGridDay",
-  },
+  initialView: screenWidth.value < 640 ? "dayGridDay" : "dayGridMonth",
+  events: calendarEvents.value, // Pass the value of the computed property
+  headerToolbar:
+    screenWidth.value < 640 ? mobileHeaderToolbar : desktopHeaderToolbar,
+  height: "auto",
+  aspectRatio: screenWidth.value < 640 ? 0.8 : 1.8,
+
   editable: true,
   selectable: true,
 
   eventClick: function (info) {
-    alert(
-      "Task: " +
-        info.event.title +
-        "\nStatus: " +
-        info.event.extendedProps.status
+    console.log(
+      "Task clicked:",
+      info.event.title,
+      "Status:",
+      info.event.extendedProps.status
     );
   },
   dateClick: function (info) {
-    alert("Clicked on date: " + info.dateStr);
+    console.log("Date clicked:", info.dateStr);
   },
   eventDrop: async function (info) {
     const updatedDueDate = info.event.startStr;
@@ -138,12 +179,11 @@ const calendarOptions = ref({
       info.revert();
     }
   },
-  eventColor: "#378006",
-  eventTextColor: "#ffffff",
-});
+}));
 </script>
 
 <style>
+/* Keep your custom styling here */
 .fc-button-primary {
   @apply bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors;
 }
@@ -153,13 +193,11 @@ const calendarOptions = ref({
 }
 
 .fc-event-completed {
-  @apply bg-green-500 !important;
-  border-color: theme("colors.green.600") !important;
+  @apply bg-green-500 text-white border-green-600 !important;
 }
 
 .fc-event-pending {
-  @apply bg-yellow-500 !important;
-  border-color: theme("colors.yellow.600") !important;
+  @apply bg-yellow-500 text-white border-yellow-600 !important;
 }
 
 .fc {

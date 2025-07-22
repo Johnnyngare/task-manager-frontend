@@ -80,6 +80,7 @@
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
+        stroke="currentColor"
       >
         <circle
           class="opacity-25"
@@ -130,8 +131,7 @@
 
     <!-- Task Form Modal/Component -->
     <Teleport to="body">
-      <!-- FIX: Add the @after-leave event hook -->
-      <Transition name="modal-fade" @after-leave="onModalAfterLeave">
+      <Transition name="modal-fade">
         <div
           v-if="showTaskForm"
           class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
@@ -164,7 +164,7 @@ const showTaskForm = ref(false);
 const editingTask = ref(null);
 const searchQuery = ref("");
 const statusFilter = ref("");
-const needsRefetch = ref(false); // --- FIX: Add a flag to control refetching ---
+// needsRefetch is removed from this logic (no longer needed)
 
 const fetchTasksWithFilters = () => {
   if (!authStore.isUserAuthenticated) return;
@@ -188,19 +188,11 @@ const openEditTaskForm = (task) => {
   showTaskForm.value = true;
 };
 
-// --- FIX: This function now only sets the flag and closes the modal ---
 const handleTaskSaved = () => {
-  needsRefetch.value = true; // Set the flag to true
-  showTaskForm.value = false; // Start the closing transition
+  showTaskForm.value = false;
   editingTask.value = null;
-};
-
-// --- FIX: This new function is called ONLY after the transition is complete ---
-const onModalAfterLeave = () => {
-  if (needsRefetch.value) {
-    fetchTasksWithFilters(); // Perform the refetch now that the DOM is stable
-    needsRefetch.value = false; // Reset the flag
-  }
+  // No explicit fetchTasksWithFilters() needed here,
+  // as the task is already in tasksStore.tasks via unshift in addTask action.
 };
 
 const closeTaskForm = () => {

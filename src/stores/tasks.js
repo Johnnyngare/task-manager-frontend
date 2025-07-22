@@ -19,7 +19,7 @@ export const useTasksStore = defineStore("tasks", {
         this.tasks = response.data.tasks || [];
       } catch (err) {
         this.error = err.response?.data?.message || "Failed to fetch tasks.";
-        this.tasks = []; // Also reset to an empty array on error
+        this.tasks = [];
         console.error("Error fetching tasks:", err);
       } finally {
         this.loading = false;
@@ -32,9 +32,26 @@ export const useTasksStore = defineStore("tasks", {
       const toast = useToast();
       try {
         const response = await axios.post("/tasks", taskData);
-        this.tasks.unshift(response.data.task);
-        toast.success("Task added successfully!");
-        return true;
+        // --- FIX: Add robustness check for response.data.task ---
+        if (
+          response.data &&
+          typeof response.data.task === "object" &&
+          response.data.task !== null
+        ) {
+          this.tasks.unshift(response.data.task); // Add the new task to the start of the list
+          toast.success("Task added successfully!");
+          return true; // Indicate success
+        } else {
+          // Fallback if backend reports success but no valid task is returned
+          console.warn(
+            "Backend reported success but did not return a valid task object for addTask:",
+            response.data
+          );
+          toast.success("Task added successfully (UI might need refresh)."); // Inform user but hint at potential UI desync
+          // Optionally, you might force a refetch here if you suspect immediate inconsistency
+          // this.fetchTasks();
+          return true;
+        }
       } catch (err) {
         this.error = err.response?.data?.message || "Failed to add task.";
         toast.error(this.error);
@@ -53,12 +70,27 @@ export const useTasksStore = defineStore("tasks", {
         const response = await axios.put(`/tasks/${taskId}`, taskData);
         const index = this.tasks.findIndex((task) => task._id === taskId);
         if (index !== -1) {
-          this.tasks[index] = response.data.task;
+          // --- FIX: Add robustness check for response.data.task ---
+          if (
+            response.data &&
+            typeof response.data.task === "object" &&
+            response.data.task !== null
+          ) {
+            this.tasks[index] = response.data.task; // Update the task in the array
+            toast.success("Task updated successfully!");
+            return true; // Indicate success
+          } else {
+            console.warn(
+              "Backend reported success but did not return a valid task object for updateTask:",
+              response.data
+            );
+            toast.success("Task updated successfully (UI might need refresh).");
+            // Optionally, this.fetchTasks(); here as well
+            return true;
+          }
         }
-        toast.success("Task updated successfully!");
-        return true;
+        return false; // If task not found in local store, indicate failure to update local
       } catch (err) {
-        // <-- The correct opening of the catch block
         this.error = err.response?.data?.message || "Failed to update task.";
         toast.error(this.error);
         console.error("Error updating task:", err);

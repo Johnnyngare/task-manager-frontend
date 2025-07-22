@@ -130,7 +130,8 @@
 
     <!-- Task Form Modal/Component -->
     <Teleport to="body">
-      <Transition name="modal-fade">
+      <!-- FIX: Add the @after-leave event hook -->
+      <Transition name="modal-fade" @after-leave="onModalAfterLeave">
         <div
           v-if="showTaskForm"
           class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
@@ -149,14 +150,13 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from "vue"; // FIX: Import nextTick
+import { ref, watch } from "vue";
 import { useTasksStore } from "../stores/tasks";
 import { useAuthStore } from "../stores/auth";
 import TaskItem from "../components/TaskItem.vue";
 import TaskForm from "../components/TaskForm.vue";
 import debounce from "lodash.debounce";
 
-// 1. Initialize stores and refs first
 const tasksStore = useTasksStore();
 const authStore = useAuthStore();
 
@@ -164,8 +164,8 @@ const showTaskForm = ref(false);
 const editingTask = ref(null);
 const searchQuery = ref("");
 const statusFilter = ref("");
+const needsRefetch = ref(false); // --- FIX: Add a flag to control refetching ---
 
-// 2. DEFINE ALL YOUR FUNCTIONS NEXT
 const fetchTasksWithFilters = () => {
   if (!authStore.isUserAuthenticated) return;
   const filters = {};
@@ -188,12 +188,19 @@ const openEditTaskForm = (task) => {
   showTaskForm.value = true;
 };
 
-// FIX: Ensure modal is fully closed before re-fetching data
-const handleTaskSaved = async () => {
-  showTaskForm.value = false;
+// --- FIX: This function now only sets the flag and closes the modal ---
+const handleTaskSaved = () => {
+  needsRefetch.value = true; // Set the flag to true
+  showTaskForm.value = false; // Start the closing transition
   editingTask.value = null;
-  await nextTick(); // Wait for the DOM update (modal removal)
-  fetchTasksWithFilters();
+};
+
+// --- FIX: This new function is called ONLY after the transition is complete ---
+const onModalAfterLeave = () => {
+  if (needsRefetch.value) {
+    fetchTasksWithFilters(); // Perform the refetch now that the DOM is stable
+    needsRefetch.value = false; // Reset the flag
+  }
 };
 
 const closeTaskForm = () => {
@@ -212,7 +219,6 @@ const handleToggleStatus = async (task) => {
   await tasksStore.updateTask(task._id, { status: newStatus });
 };
 
-// 3. SET UP YOUR WATCHERS LAST
 watch(
   () => authStore.isUserAuthenticated,
   (isAuthenticated) => {
